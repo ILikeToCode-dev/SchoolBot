@@ -28,6 +28,8 @@
 				margin-bottom: 5px;
 			}
 		</style>
+		<!-- Fixes favicon issue -->
+		<link rel="icon" href="data:,">
 	</head>
 	<body>
 		<div class="container">
@@ -51,6 +53,7 @@
 					return;
 				}
 				responseDiv.innerHTML = 'Loading...';
+
 				try {
 					const response = await fetch(
 						'https://openrouter.ai/api/v1/chat/completions',
@@ -68,13 +71,26 @@
 							}),
 						},
 					);
+
+					// Check if the response is valid JSON
+					if (!response.ok) {
+						throw new Error(`HTTP error! Status: ${response.status}`);
+					}
+
 					const data = await response.json();
-					console.log(data);
-					const markdownText =
-						data.choices?.[0]?.message?.content || 'No response received.';
+					console.log("API Response:", data);
+
+					// Fix possible undefined access
+					if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+						throw new Error("Invalid API response format.");
+					}
+
+					const markdownText = data.choices[0].message.content;
 					responseDiv.innerHTML = marked.parse(markdownText);
+
 				} catch (error) {
-					responseDiv.innerHTML = 'Error: ' + error.message;
+					console.error("Fetch error:", error);
+					responseDiv.innerHTML = "Error: " + error.message;
 				}
 			}
 		</script>

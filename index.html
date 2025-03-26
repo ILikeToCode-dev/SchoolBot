@@ -62,10 +62,17 @@
             padding: 15px;
             min-height: 50px;
             border-radius: 5px;
-            transition: opacity 0.3s ease-in-out;
+            text-align: left;
         }
         .loading {
             opacity: 0.5;
+        }
+        .typing-cursor::after {
+            content: "|";
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            50% { opacity: 0; }
         }
     </style>
 </head>
@@ -88,7 +95,7 @@
                 return;
             }
 
-            responseDiv.innerHTML = '⏳ Loading...';
+            responseDiv.innerHTML = '⏳ Typing...';
             responseDiv.classList.add('loading');
 
             try {
@@ -112,12 +119,27 @@
                 responseDiv.classList.remove('loading');
 
                 const markdownText = data.choices?.[0]?.message?.content || 'No response received.';
-                responseDiv.innerHTML = marked.parse(markdownText);
+                typeText(responseDiv, marked.parse(markdownText)); // Call typing effect function
 
             } catch (error) {
                 responseDiv.classList.remove('loading');
                 responseDiv.innerHTML = '❌ Error: ' + error.message;
             }
+        }
+
+        // Function to create typing animation effect
+        function typeText(element, text, speed = 50) {
+            element.innerHTML = ''; // Clear previous content
+            let i = 0;
+            
+            function typingEffect() {
+                if (i < text.length) {
+                    element.innerHTML += text.charAt(i);
+                    i++;
+                    setTimeout(typingEffect, speed);
+                }
+            }
+            typingEffect();
         }
     </script>
 

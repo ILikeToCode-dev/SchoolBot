@@ -84,21 +84,14 @@
             border-radius: 5px;
             text-align: left;
             font-size: 1em;
+            white-space: pre-wrap; /* Keeps multi-line format */
+            word-wrap: break-word;
             overflow-wrap: break-word;
         }
 
         .loading {
             opacity: 0.5;
             font-style: italic;
-        }
-
-        .typing-cursor::after {
-            content: "|";
-            animation: blink 1s infinite;
-        }
-
-        @keyframes blink {
-            50% { opacity: 0; }
         }
 
         @media (max-width: 600px) {
@@ -151,10 +144,12 @@
                 
                 responseDiv.classList.remove('loading');
 
-                const markdownText = data.choices?.[0]?.message?.content || 'No response received.';
-                const htmlContent = marked.parse(markdownText); // Keep proper HTML structure
-
-                typeText(responseDiv, htmlContent); // Call typing function
+                let markdownText = data.choices?.[0]?.message?.content || 'No response received.';
+                
+                // Convert Markdown to HTML but strip HTML for typing effect
+                let plainText = markdownText.replace(/<\/?[^>]+(>|$)/g, ""); // Removes HTML tags
+                
+                typeText(responseDiv, plainText); // Call typing function
 
             } catch (error) {
                 responseDiv.classList.remove('loading');
@@ -171,7 +166,7 @@
                     i++;
                     setTimeout(type, speed);
                 } else {
-                    element.innerHTML = text; // Ensure full text renders correctly
+                    element.innerHTML = text.replace(/\n/g, "<br>"); // Ensure new lines show up
                 }
             }
             type();

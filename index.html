@@ -90,21 +90,25 @@
 
     <script>
         let isTyping = false;
-        let chatHistory = JSON.parse(localStorage.getItem("chatHistory")) || [];
+        let chatHistory = [];
 
         document.addEventListener("DOMContentLoaded", () => {
-            loadChatHistory();
+            let storedChat = localStorage.getItem("chatHistory");
+            if (storedChat) {
+                chatHistory = JSON.parse(storedChat);
+                loadChatHistory();
+            }
         });
 
         function loadChatHistory() {
             const chatBox = document.getElementById("chatBox");
             chatBox.innerHTML = "";
             chatHistory.forEach(msg => {
-                addMessage(msg.text, msg.sender);
+                addMessage(msg.text, msg.sender, false);
             });
         }
 
-        function addMessage(text, sender) {
+        function addMessage(text, sender, save = true) {
             const chatBox = document.getElementById("chatBox");
             const messageDiv = document.createElement("div");
             messageDiv.classList.add("message", sender === "user" ? "user-message" : "bot-message");
@@ -133,8 +137,10 @@
                 chatBox.scrollTop = chatBox.scrollHeight;
             }
 
-            chatHistory.push({ text, sender });
-            localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
+            if (save) {
+                chatHistory.push({ text, sender });
+                localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
+            }
         }
 
         async function sendMessage() {
@@ -161,6 +167,12 @@
                 });
 
                 if (!response.ok) throw new Error(`Error: ${response.status}`);
+                
+                const contentType = response.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) {
+                    throw new Error("Invalid response from AI API");
+                }
+
                 const data = await response.json();
                 const reply = data.choices?.[0]?.message?.content || "I couldn't understand that.";
                 addMessage(reply, "bot");

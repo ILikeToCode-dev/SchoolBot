@@ -4,222 +4,198 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WSP ChatBot</title>
+    
+    <!-- Bootstrap for UI -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.3.1/css/bootstrap.min.css">
+    
+    <!-- KaTeX for math rendering -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.4/katex.min.css">
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.4/katex.min.js"></script>
+    
+    <!-- Marked.js for Markdown support -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
     <style>
         body {
             background-color: var(--bg-color, #f8f9fa);
             color: var(--text-color, #000);
-            font-family: Arial, sans-serif;
+            transition: background 0.3s, color 0.3s;
         }
-
         .chat-container {
             max-width: 600px;
-            margin: auto;
+            margin: 20px auto;
             padding: 20px;
             background: var(--chat-bg, #fff);
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
-
-        .message {
-            padding: 10px;
-            border-radius: 5px;
-            margin: 5px 0;
-            max-width: 80%;
-            word-wrap: break-word;
-        }
-
-        .user-message {
-            background: var(--user-bg, #007bff);
-            color: #fff;
-            text-align: right;
-            margin-left: auto;
-        }
-
-        .bot-message {
-            background: var(--bot-bg, #e9ecef);
-            color: var(--text-color, #000);
-            text-align: left;
-            margin-right: auto;
-        }
-
         .chat-box {
-            display: flex;
-            flex-direction: column;
             height: 400px;
             overflow-y: auto;
-            padding: 10px;
             border: 1px solid #ccc;
-            border-radius: 5px;
+            padding: 10px;
+            border-radius: 8px;
             background: var(--chat-bg, #fff);
         }
-
-        .chat-input {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .chat-input textarea {
-            flex: 1;
-            resize: none;
-            padding: 10px;
+        .chat-message {
+            padding: 8px 12px;
+            margin: 5px 0;
             border-radius: 5px;
-            border: 1px solid #ccc;
         }
-
-        .chat-buttons {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 10px;
+        .user-message {
+            background: #007bff;
+            color: white;
+            text-align: right;
         }
-
-        .hidden {
-            display: none;
+        .bot-message {
+            background: #f1f1f1;
+        }
+        .typing-animation {
+            font-style: italic;
+            color: gray;
+        }
+        /* Dark mode */
+        .dark-mode {
+            --bg-color: #121212;
+            --text-color: #fff;
+            --chat-bg: #1e1e1e;
+        }
+        /* Make UI responsive */
+        @media (max-width: 600px) {
+            .chat-container {
+                width: 95%;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2 class="text-center">WSP ChatBot</h2>
         <div class="chat-container">
+            <h2 class="text-center">WSP ChatBot</h2>
             <div class="chat-box" id="chatBox"></div>
-            <div class="chat-input">
-                <textarea id="userInput" placeholder="Enter your message..." rows="2"></textarea>
-                <button class="btn btn-success" onclick="sendMessage()">Send</button>
-            </div>
-            <div class="chat-buttons">
-                <button class="btn btn-secondary" onclick="clearChat()">Clear Chat</button>
-                <button class="btn btn-info" onclick="openSettings()">Settings</button>
-            </div>
+
+            <textarea id="userInput" class="form-control" placeholder="Enter your message..." rows="3"></textarea>
+            <button class="btn btn-success mt-2" id="sendBtn">Send</button>
+            <button class="btn btn-danger mt-2" id="clearBtn">Clear Chat</button>
+            <button class="btn btn-secondary mt-2" id="toggleTheme">Toggle Dark Mode</button>
         </div>
     </div>
 
-    <!-- Settings Modal -->
-    <div id="settingsModal" class="hidden">
-        <h3>Settings</h3>
-        <label>Dark Mode:</label>
-        <input type="checkbox" id="darkModeToggle">
-        <label>Background Image URL:</label>
-        <input type="text" id="bgImageInput" placeholder="Enter image URL">
-        <button class="btn btn-primary" onclick="saveSettings()">Save</button>
-    </div>
-
     <script>
-        let chatHistory = JSON.parse(localStorage.getItem("chatHistory")) || [];
+        document.addEventListener("DOMContentLoaded", loadChatHistory);
+        
+        let chatBox = document.getElementById("chatBox");
+        let userInput = document.getElementById("userInput");
+        let sendBtn = document.getElementById("sendBtn");
+        let clearBtn = document.getElementById("clearBtn");
+        let toggleTheme = document.getElementById("toggleTheme");
 
-        document.addEventListener("DOMContentLoaded", function () {
-            loadChatHistory();
-            loadSettings();
+        let isTyping = false;
+
+        sendBtn.addEventListener("click", sendMessage);
+        clearBtn.addEventListener("click", clearChat);
+        toggleTheme.addEventListener("click", toggleDarkMode);
+
+        userInput.addEventListener("keydown", function(event) {
+            if (event.shiftKey && event.key === "Enter") {
+                return; // Allow multi-line input
+            }
+            if (event.key === "Enter") {
+                event.preventDefault();
+                sendMessage();
+            }
         });
 
+        function addMessage(text, sender) {
+            let messageDiv = document.createElement("div");
+            messageDiv.classList.add("chat-message", sender === "user" ? "user-message" : "bot-message");
+
+            if (sender === "bot") {
+                typeText(messageDiv, text);
+            } else {
+                messageDiv.innerHTML = text;
+            }
+
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
         async function sendMessage() {
-            const inputElement = document.getElementById('userInput');
-            const chatBox = document.getElementById('chatBox');
-            let userMessage = inputElement.value.trim();
-
-            if (!userMessage) return;
-
-            // Prevent sending while AI is typing
-            inputElement.disabled = true;
-
-            addMessage(userMessage, "user");
-            inputElement.value = "";
+            if (isTyping) return;
+            
+            let inputText = userInput.value.trim();
+            if (!inputText) return;
+            
+            addMessage(inputText, "user");
+            userInput.value = "";
+            isTyping = true;
+            sendBtn.disabled = true;
 
             try {
-                const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-                    method: 'POST',
+                let response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                    method: "POST",
                     headers: {
-                        Authorization: 'Bearer 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',
-                        'Content-Type': 'application/json'
+                        Authorization: "Bearer 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",
+                        "Content-Type": "application/json",
                     },
                     body: JSON.stringify({
-                        model: 'deepseek/deepseek-r1:free',
-                        messages: [{ role: 'user', content: userMessage }]
+                        model: "deepseek/deepseek-r1:free",
+                        messages: [{ role: "user", content: inputText }],
                     }),
                 });
 
-                const data = await response.json();
-                const botResponse = data.choices?.[0]?.message?.content || "No response received.";
-                
-                // Typing effect
-                await typeMessage(botResponse, "bot");
+                let data = await response.json();
+                if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+                    throw new Error("Invalid API response");
+                }
+
+                let botResponse = data.choices[0].message.content;
+                addMessage(marked.parse(botResponse), "bot");
 
             } catch (error) {
                 addMessage("Error: " + error.message, "bot");
             }
 
-            inputElement.disabled = false;
-            inputElement.focus();
+            isTyping = false;
+            sendBtn.disabled = false;
         }
 
-        function addMessage(content, sender) {
-            const chatBox = document.getElementById('chatBox');
-            const messageDiv = document.createElement("div");
-            messageDiv.classList.add("message", sender === "user" ? "user-message" : "bot-message");
-            messageDiv.innerHTML = marked.parse(content);
-            chatBox.appendChild(messageDiv);
-            chatBox.scrollTop = chatBox.scrollHeight;
-
-            chatHistory.push({ content, sender });
-            localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
-        }
-
-        async function typeMessage(content, sender) {
-            const chatBox = document.getElementById('chatBox');
-            const messageDiv = document.createElement("div");
-            messageDiv.classList.add("message", sender === "user" ? "user-message" : "bot-message");
-            chatBox.appendChild(messageDiv);
-
-            let text = marked.parse(content);
+        function typeText(element, text) {
             let index = 0;
+            element.classList.add("typing-animation");
+            chatBox.appendChild(element);
 
-            while (index < text.length) {
-                messageDiv.innerHTML = text.slice(0, index + 1);
-                index++;
-                await new Promise(r => setTimeout(r, 15));
-            }
-
-            chatBox.scrollTop = chatBox.scrollHeight;
-            chatHistory.push({ content, sender });
-            localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
+            let interval = setInterval(() => {
+                if (index < text.length) {
+                    element.innerHTML += text[index++];
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                } else {
+                    clearInterval(interval);
+                    element.classList.remove("typing-animation");
+                }
+            }, 30);
         }
 
         function clearChat() {
-            document.getElementById("chatBox").innerHTML = "";
-            chatHistory = [];
             localStorage.removeItem("chatHistory");
+            chatBox.innerHTML = "";
         }
 
         function loadChatHistory() {
-            chatHistory.forEach(msg => addMessage(msg.content, msg.sender));
+            let savedChats = JSON.parse(localStorage.getItem("chatHistory")) || [];
+            savedChats.forEach(msg => addMessage(msg.text, msg.sender));
         }
 
-        function openSettings() {
-            document.getElementById("settingsModal").classList.toggle("hidden");
+        function toggleDarkMode() {
+            document.body.classList.toggle("dark-mode");
+            localStorage.setItem("darkMode", document.body.classList.contains("dark-mode"));
         }
 
-        function saveSettings() {
-            const darkMode = document.getElementById("darkModeToggle").checked;
-            const bgImage = document.getElementById("bgImageInput").value;
-
-            document.body.style.setProperty("--bg-color", darkMode ? "#121212" : "#f8f9fa");
-            document.body.style.setProperty("--text-color", darkMode ? "#ffffff" : "#000000");
-            document.body.style.backgroundImage = bgImage ? `url(${bgImage})` : "none";
-            
-            localStorage.setItem("darkMode", darkMode);
-            localStorage.setItem("bgImage", bgImage);
-        }
-
-        function loadSettings() {
-            const darkMode = localStorage.getItem("darkMode") === "true";
-            const bgImage = localStorage.getItem("bgImage");
-
-            document.getElementById("darkModeToggle").checked = darkMode;
-            document.getElementById("bgImageInput").value = bgImage || "";
-            saveSettings();
-        }
+        window.onload = function() {
+            if (localStorage.getItem("darkMode") === "true") {
+                document.body.classList.add("dark-mode");
+            }
+        };
     </script>
 </body>
 </html>

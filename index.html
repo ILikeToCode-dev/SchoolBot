@@ -11,7 +11,7 @@
             font-family: Arial, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
-            transition: 0.3s ease-in-out;
+            transition: 0.3s;
         }
 
         :root {
@@ -117,6 +117,7 @@
             border-radius: 5px;
             cursor: pointer;
             transition: 0.3s;
+            margin: 5px;
         }
 
         .settings-container input {
@@ -134,6 +135,7 @@
         </div>
         <div class="settings-container">
             <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
+            <button onclick="clearChat()">Clear Chat</button>
             <input type="file" id="bgUpload" accept="image/*" onchange="changeBackground(event)">
         </div>
     </div>
@@ -164,12 +166,10 @@
             isTyping = true;
             sendButton.disabled = true;
 
-            // Add user message
             addMessage(input, "user-message");
 
             document.getElementById("userInput").value = "";
 
-            // Simulate typing
             const typingIndicator = document.createElement("div");
             typingIndicator.className = "message bot-message typing-indicator";
             typingIndicator.textContent = "Typing...";
@@ -196,7 +196,6 @@
                 const data = await response.json();
                 const text = data.choices?.[0]?.message?.content || "No response.";
 
-                // Remove typing indicator and display AI response
                 chatHistory.removeChild(typingIndicator);
                 await typeMessage(text, "bot-message");
             } catch (error) {
@@ -229,6 +228,7 @@
                 chatHistory.scrollTop = chatHistory.scrollHeight;
                 await new Promise(resolve => setTimeout(resolve, 30));
             }
+            saveChatHistory();
         }
 
         function toggleDarkMode() {
@@ -260,6 +260,11 @@
 
         function loadChatHistory() {
             document.getElementById("chatHistory").innerHTML = localStorage.getItem("chatHistory") || "";
+        }
+
+        function clearChat() {
+            localStorage.removeItem("chatHistory");
+            document.getElementById("chatHistory").innerHTML = "";
         }
     </script>
 </body>

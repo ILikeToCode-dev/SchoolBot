@@ -41,6 +41,8 @@
             padding: 8px 12px;
             margin: 5px 0;
             border-radius: 5px;
+            word-wrap: break-word;
+            max-width: 100%;
         }
         .user-message {
             background: #007bff;
@@ -113,7 +115,7 @@
             if (sender === "bot") {
                 typeText(messageDiv, text);
             } else {
-                messageDiv.innerHTML = text;
+                messageDiv.innerText = text;
             }
 
             chatBox.appendChild(messageDiv);
@@ -145,12 +147,14 @@
                 });
 
                 let data = await response.json();
-                if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+                let botResponse = data?.choices?.[0]?.message?.content;
+
+                if (!botResponse) {
                     throw new Error("Invalid API response");
                 }
 
-                let botResponse = data.choices[0].message.content;
-                addMessage(marked.parse(botResponse), "bot");
+                // Convert markdown to HTML after typing
+                addMessage(botResponse, "bot");
 
             } catch (error) {
                 addMessage("Error: " + error.message, "bot");
@@ -167,11 +171,14 @@
 
             let interval = setInterval(() => {
                 if (index < text.length) {
-                    element.innerHTML += text[index++];
+                    element.innerText += text[index++];
                     chatBox.scrollTop = chatBox.scrollHeight;
                 } else {
                     clearInterval(interval);
                     element.classList.remove("typing-animation");
+
+                    // After typing, render markdown properly
+                    element.innerHTML = marked.parse(text);
                 }
             }, 30);
         }

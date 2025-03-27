@@ -16,26 +16,42 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #000;
+            --chat-bg: #fff;
+            --sidebar-bg: #f1f1f1;
+        }
         body {
-            background-color: var(--bg-color, #f8f9fa);
-            color: var(--text-color, #000);
+            background-color: var(--bg-color);
+            color: var(--text-color);
             transition: background 0.3s, color 0.3s;
         }
-        .chat-container {
-            max-width: 600px;
-            margin: 20px auto;
+        .container-fluid {
+            padding: 0;
+        }
+        .sidebar {
+            background: var(--sidebar-bg);
             padding: 20px;
-            background: var(--chat-bg, #fff);
+            height: 100vh;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+        }
+        .chat-container {
+            max-width: 100%;
+            margin: 20px;
+            padding: 20px;
+            background: var(--chat-bg);
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
         .chat-box {
-            height: 400px;
+            height: 60vh;
             overflow-y: auto;
             border: 1px solid #ccc;
             padding: 10px;
             border-radius: 8px;
-            background: var(--chat-bg, #fff);
+            background: var(--chat-bg);
         }
         .chat-message {
             padding: 8px 12px;
@@ -43,11 +59,18 @@
             border-radius: 5px;
             word-wrap: break-word;
             max-width: 100%;
+            opacity: 0;
+            transition: opacity 0.5s ease-in;
+            display: flex;
+            align-items: flex-start;
+        }
+        .chat-message.visible {
+            opacity: 1;
         }
         .user-message {
             background: #007bff;
             color: white;
-            text-align: right;
+            justify-content: flex-end;
         }
         .bot-message {
             background: #f1f1f1;
@@ -56,52 +79,80 @@
             font-style: italic;
             color: gray;
         }
+        .timestamp {
+            font-size: 0.8em;
+            color: #888;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+        .message-content {
+            max-width: 80%;
+        }
         /* Dark mode */
         .dark-mode {
             --bg-color: #121212;
             --text-color: #fff;
             --chat-bg: #1e1e1e;
+            --sidebar-bg: #2c2c2c;
         }
-        /* Make UI responsive */
-        @media (max-width: 600px) {
+        .dark-mode .bot-message {
+            background: #333;
+        }
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                width: 250px;
+                left: -250px;
+                z-index: 1000;
+            }
+            .sidebar.active {
+                left: 0;
+            }
             .chat-container {
-                width: 95%;
+                margin: 10px;
+            }
+            .chat-box {
+                height: 50vh;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="chat-container">
-            <h2 class="text-center">WSP ChatBot</h2>
-            <div class="chat-box" id="chatBox"></div>
-
-            <textarea id="userInput" class="form-control" placeholder="Enter your message..." rows="3"></textarea>
-            <button class="btn btn-success mt-2" id="sendBtn">Send</button>
-            <button class="btn btn-danger mt-2" id="clearBtn">Clear Chat</button>
-            <button class="btn btn-secondary mt-2" id="toggleTheme">Toggle Dark Mode</button>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-3 sidebar" id="sidebar">
+                <h3>Options</h3>
+                <button class="btn btn-danger mb-2" id="clearBtn">Clear Chat</button>
+                <button class="btn btn-secondary mb-2" id="toggleTheme">Toggle Dark Mode</button>
+                <!-- More options can be added here -->
+            </div>
+            <div class="col-md-9">
+                <div class="chat-container">
+                    <h2 class="text-center">WSP ChatBot</h2>
+                    <div class="chat-box" id="chatBox"></div>
+                    <textarea id="userInput" class="form-control mt-3" placeholder="Enter your message..." rows="3"></textarea>
+                    <button class="btn btn-success mt-2" id="sendBtn">Send</button>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
         document.addEventListener("DOMContentLoaded", loadChatHistory);
-        
+
         let chatBox = document.getElementById("chatBox");
         let userInput = document.getElementById("userInput");
         let sendBtn = document.getElementById("sendBtn");
         let clearBtn = document.getElementById("clearBtn");
         let toggleTheme = document.getElementById("toggleTheme");
-
         let isTyping = false;
 
         sendBtn.addEventListener("click", sendMessage);
         clearBtn.addEventListener("click", clearChat);
         toggleTheme.addEventListener("click", toggleDarkMode);
-
         userInput.addEventListener("keydown", function(event) {
-            if (event.shiftKey && event.key === "Enter") {
-                return; // Allow multi-line input
-            }
+            if (event.shiftKey && event.key === "Enter") return;
             if (event.key === "Enter") {
                 event.preventDefault();
                 sendMessage();
@@ -111,27 +162,71 @@
         function addMessage(text, sender) {
             let messageDiv = document.createElement("div");
             messageDiv.classList.add("chat-message", sender === "user" ? "user-message" : "bot-message");
+            messageDiv.dataset.text = text;
+
+            let timestamp = new Date().toLocaleTimeString();
+            let timestampSpan = document.createElement("span");
+            timestampSpan.classList.add("timestamp");
+            timestampSpan.innerText = timestamp;
+
+            let contentDiv = document.createElement("div");
+            contentDiv.classList.add("message-content");
 
             if (sender === "bot") {
-                typeText(messageDiv, text);
+                typeText(contentDiv, text);
             } else {
-                messageDiv.innerText = text;
+                contentDiv.innerText = text;
             }
 
+            messageDiv.appendChild(timestampSpan);
+            messageDiv.appendChild(contentDiv);
             chatBox.appendChild(messageDiv);
+            setTimeout(() => messageDiv.classList.add("visible"), 10);
             chatBox.scrollTop = chatBox.scrollHeight;
+            saveChatHistory();
+        }
+
+        function typeText(contentDiv, text) {
+            let index = 0;
+            contentDiv.classList.add("typing-animation");
+            let interval = setInterval(() => {
+                if (index < text.length) {
+                    contentDiv.innerText += text[index++];
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                } else {
+                    clearInterval(interval);
+                    contentDiv.classList.remove("typing-animation");
+                    contentDiv.innerHTML = marked.parse(text);
+                }
+            }, 30);
+        }
+
+        function addTypingIndicator() {
+            let typingDiv = document.createElement("div");
+            typingDiv.classList.add("chat-message", "bot-message", "typing-animation");
+            typingDiv.innerText = "Bot is typing...";
+            chatBox.appendChild(typingDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            return typingDiv;
+        }
+
+        function removeTypingIndicator(typingDiv) {
+            if (typingDiv && chatBox.contains(typingDiv)) {
+                chatBox.removeChild(typingDiv);
+            }
         }
 
         async function sendMessage() {
             if (isTyping) return;
-            
             let inputText = userInput.value.trim();
             if (!inputText) return;
-            
+
             addMessage(inputText, "user");
             userInput.value = "";
             isTyping = true;
             sendBtn.disabled = true;
+
+            let typingDiv = addTypingIndicator();
 
             try {
                 let response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -146,17 +241,17 @@
                     }),
                 });
 
+                if (!response.ok) throw new Error("API request failed: " + response.statusText);
                 let data = await response.json();
-                let botResponse = data?.choices?.[0]?.message?.content;
-
-                if (!botResponse) {
+                if (!data.choices || !data.choices[0] || !data.choices[0].message || !data.choices[0].message.content) {
                     throw new Error("Invalid API response");
                 }
+                let botResponse = data.choices[0].message.content;
 
-                // Convert markdown to HTML after typing
+                removeTypingIndicator(typingDiv);
                 addMessage(botResponse, "bot");
-
             } catch (error) {
+                removeTypingIndicator(typingDiv);
                 addMessage("Error: " + error.message, "bot");
             }
 
@@ -164,33 +259,47 @@
             sendBtn.disabled = false;
         }
 
-        function typeText(element, text) {
-            let index = 0;
-            element.classList.add("typing-animation");
-            chatBox.appendChild(element);
+        function saveChatHistory() {
+            let messages = [];
+            document.querySelectorAll('.chat-message').forEach(msg => {
+                let sender = msg.classList.contains('user-message') ? 'user' : 'bot';
+                let text = msg.dataset.text;
+                let timestamp = msg.querySelector('.timestamp').innerText;
+                messages.push({ text, sender, timestamp });
+            });
+            localStorage.setItem('chatHistory', JSON.stringify(messages));
+        }
 
-            let interval = setInterval(() => {
-                if (index < text.length) {
-                    element.innerText += text[index++];
-                    chatBox.scrollTop = chatBox.scrollHeight;
+        function loadChatHistory() {
+            let savedChats = JSON.parse(localStorage.getItem("chatHistory")) || [];
+            savedChats.forEach(msg => {
+                let messageDiv = document.createElement("div");
+                messageDiv.classList.add("chat-message", msg.sender === "user" ? "user-message" : "bot-message");
+                messageDiv.dataset.text = msg.text;
+
+                let timestampSpan = document.createElement("span");
+                timestampSpan.classList.add("timestamp");
+                timestampSpan.innerText = msg.timestamp;
+
+                let contentDiv = document.createElement("div");
+                contentDiv.classList.add("message-content");
+                if (msg.sender === "user") {
+                    contentDiv.innerText = msg.text;
                 } else {
-                    clearInterval(interval);
-                    element.classList.remove("typing-animation");
-
-                    // After typing, render markdown properly
-                    element.innerHTML = marked.parse(text);
+                    contentDiv.innerHTML = marked.parse(msg.text);
                 }
-            }, 30);
+
+                messageDiv.appendChild(timestampSpan);
+                messageDiv.appendChild(contentDiv);
+                chatBox.appendChild(messageDiv);
+                messageDiv.classList.add("visible");
+            });
+            chatBox.scrollTop = chatBox.scrollHeight;
         }
 
         function clearChat() {
             localStorage.removeItem("chatHistory");
             chatBox.innerHTML = "";
-        }
-
-        function loadChatHistory() {
-            let savedChats = JSON.parse(localStorage.getItem("chatHistory")) || [];
-            savedChats.forEach(msg => addMessage(msg.text, msg.sender));
         }
 
         function toggleDarkMode() {

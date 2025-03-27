@@ -80,7 +80,7 @@
     <div class="chat-container">
         <h3>Chatbot</h3>
         <div class="chat-box" id="chatBox"></div>
-        <textarea id="userInput" placeholder="Type a message..."></textarea>
+        <textarea id="userInput" placeholder="Type a message... (Supports **bold**, *italic*, etc.)"></textarea>
         <div class="btn-container">
             <button class="btn btn-success" onclick="sendMessage()">Send</button>
             <button class="btn btn-secondary" onclick="toggleDarkMode()">Toggle Dark Mode</button>
@@ -110,11 +110,13 @@
             messageDiv.classList.add("message", sender === "user" ? "user-message" : "bot-message");
             chatBox.appendChild(messageDiv);
             
+            let formattedText = marked.parse(text); // Apply Markdown formatting
+
             let index = 0;
             function typeText() {
-                if (index < text.length) {
-                    messageDiv.innerHTML += text[index++];
-                    setTimeout(typeText, 20);
+                if (index < formattedText.length) {
+                    messageDiv.innerHTML += formattedText[index++];
+                    setTimeout(typeText, 10);
                 } else {
                     chatBox.scrollTop = chatBox.scrollHeight;
                 }
@@ -127,7 +129,7 @@
                     typeText();
                 }, 500);
             } else {
-                messageDiv.innerHTML = text;
+                messageDiv.innerHTML = formattedText;
                 chatBox.scrollTop = chatBox.scrollHeight;
             }
 

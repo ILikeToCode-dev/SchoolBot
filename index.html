@@ -172,15 +172,15 @@
             contentDiv.classList.add("message-content");
 
             if (sender === "bot") {
-                typeText(contentDiv, text); // Bot messages get typed out
+                typeText(contentDiv, text);
             } else {
-                contentDiv.innerText = text; // User messages appear instantly
+                contentDiv.innerText = text;
             }
 
             messageDiv.appendChild(timestampSpan);
             messageDiv.appendChild(contentDiv);
             chatBox.appendChild(messageDiv);
-            setTimeout(() => messageDiv.classList.add("visible"), 10); // Fade-in animation
+            setTimeout(() => messageDiv.classList.add("visible"), 10);
             chatBox.scrollTop = chatBox.scrollHeight;
             saveChatHistory();
         }
@@ -196,7 +196,7 @@
                 } else {
                     clearInterval(interval);
                     contentDiv.classList.remove("typing-animation");
-                    contentDiv.innerHTML = marked.parse(text); // Render markdown
+                    contentDiv.innerHTML = marked.parse(text);
                     contentDiv.style.whiteSpace = ""; // Reset after rendering
                 }
             }, 30);
@@ -205,27 +205,13 @@
         function addTypingIndicator() {
             let typingDiv = document.createElement("div");
             typingDiv.classList.add("chat-message", "bot-message", "typing-animation");
-            typingDiv.id = "typing-indicator";
-
-            let timestamp = new Date().toLocaleTimeString();
-            let timestampSpan = document.createElement("span");
-            timestampSpan.classList.add("timestamp");
-            timestampSpan.innerText = timestamp;
-
-            let contentDiv = document.createElement("div");
-            contentDiv.classList.add("message-content");
-            contentDiv.innerText = "Bot is typing...";
-
-            typingDiv.appendChild(timestampSpan);
-            typingDiv.appendChild(contentDiv);
+            typingDiv.innerText = "Bot is typing...";
             chatBox.appendChild(typingDiv);
-            setTimeout(() => typingDiv.classList.add("visible"), 10);
             chatBox.scrollTop = chatBox.scrollHeight;
             return typingDiv;
         }
 
-        function removeTypingIndicator() {
-            let typingDiv = document.getElementById("typing-indicator");
+        function removeTypingIndicator(typingDiv) {
             if (typingDiv && chatBox.contains(typingDiv)) {
                 chatBox.removeChild(typingDiv);
             }
@@ -236,13 +222,11 @@
             let inputText = userInput.value.trim();
             if (!inputText) return;
 
-            // Add user message immediately
             addMessage(inputText, "user");
             userInput.value = "";
             isTyping = true;
             sendBtn.disabled = true;
 
-            // Show typing indicator
             let typingDiv = addTypingIndicator();
 
             try {
@@ -265,10 +249,10 @@
                 }
                 let botResponse = data.choices[0].message.content;
 
-                removeTypingIndicator();
+                removeTypingIndicator(typingDiv);
                 addMessage(botResponse, "bot");
             } catch (error) {
-                removeTypingIndicator();
+                removeTypingIndicator(typingDiv);
                 addMessage("Error: " + error.message, "bot");
             }
 
@@ -278,13 +262,13 @@
 
         function saveChatHistory() {
             let messages = [];
-            document.querySelectorAll(".chat-message:not(#typing-indicator)").forEach(msg => {
-                let sender = msg.classList.contains("user-message") ? "user" : "bot";
+            document.querySelectorAll('.chat-message').forEach(msg => {
+                let sender = msg.classList.contains('user-message') ? 'user' : 'bot';
                 let text = msg.dataset.text;
-                let timestamp = msg.querySelector(".timestamp").innerText;
+                let timestamp = msg.querySelector('.timestamp').innerText;
                 messages.push({ text, sender, timestamp });
             });
-            localStorage.setItem("chatHistory", JSON.stringify(messages));
+            localStorage.setItem('chatHistory', JSON.stringify(messages));
         }
 
         function loadChatHistory() {

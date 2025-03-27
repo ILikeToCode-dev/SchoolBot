@@ -10,11 +10,13 @@
         body {
             background-color: var(--bg-color, #f8f9fa);
             color: var(--text-color, #000);
+            background-size: cover;
+            background-position: center;
         }
         .chat-container {
             max-width: 600px;
             margin: auto;
-            background: white;
+            background: var(--chat-bg, white);
             padding: 15px;
             border-radius: 10px;
             box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
@@ -25,7 +27,8 @@
             padding: 10px;
             border: 1px solid #ccc;
             border-radius: 5px;
-            background: var(--chat-bg, #fff);
+            display: flex;
+            flex-direction: column;
         }
         .message {
             padding: 8px;
@@ -33,6 +36,7 @@
             border-radius: 5px;
             max-width: 80%;
             word-wrap: break-word;
+            display: inline-block;
         }
         .user-message {
             background: #007bff;
@@ -69,6 +73,7 @@
             <div class="chat-box" id="chatBox"></div>
             <textarea id="userInput" placeholder="Type a message..." rows="2"></textarea>
             <button class="btn btn-success" onclick="sendMessage()" id="sendBtn">Send</button>
+            <button class="btn btn-danger" onclick="clearChat()">Clear Chat</button>
             <button class="btn btn-secondary" onclick="toggleDarkMode()">Toggle Dark Mode</button>
             <button class="btn btn-primary" onclick="changeBackground()">Change Background</button>
         </div>
@@ -80,6 +85,7 @@
 
         function loadChatHistory() {
             const chatBox = document.getElementById("chatBox");
+            chatBox.innerHTML = ""; // Clear existing
             chatHistory.forEach(({ text, sender }) => {
                 addMessage(text, sender, false);
             });
@@ -91,7 +97,7 @@
             messageDiv.classList.add("message", sender === "user" ? "user-message" : "bot-message");
             chatBox.appendChild(messageDiv);
 
-            let formattedText = marked.parse(text);
+            let formattedText = marked.parse(text).replace(/<\/?p>/g, "").trim(); // Remove unwanted tags
 
             let index = 0;
             function typeText() {
@@ -169,6 +175,12 @@
                 document.body.style.backgroundPosition = "center";
                 localStorage.setItem("backgroundImage", imageUrl);
             }
+        }
+
+        function clearChat() {
+            localStorage.removeItem("chatHistory");
+            chatHistory = [];
+            document.getElementById("chatBox").innerHTML = "";
         }
 
         document.getElementById("userInput").addEventListener("keydown", function(event) {

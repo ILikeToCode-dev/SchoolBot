@@ -146,6 +146,7 @@
         let clearBtn = document.getElementById("clearBtn");
         let toggleTheme = document.getElementById("toggleTheme");
         let isTyping = false;
+        let conversationHistory = []; // Array to store conversation history
 
         sendBtn.addEventListener("click", sendMessage);
         clearBtn.addEventListener("click", clearChat);
@@ -188,7 +189,7 @@
         function typeText(contentDiv, text) {
             let index = 0;
             contentDiv.classList.add("typing-animation");
-            contentDiv.style.whiteSpace = "pre-wrap"; // Preserve spaces during typing
+            contentDiv.style.whiteSpace = "pre-wrap";
             let interval = setInterval(() => {
                 if (index < text.length) {
                     contentDiv.innerText += text[index++];
@@ -197,7 +198,7 @@
                     clearInterval(interval);
                     contentDiv.classList.remove("typing-animation");
                     contentDiv.innerHTML = marked.parse(text);
-                    contentDiv.style.whiteSpace = ""; // Reset after rendering
+                    contentDiv.style.whiteSpace = "";
                 }
             }, 30);
         }
@@ -223,6 +224,7 @@
             if (!inputText) return;
 
             addMessage(inputText, "user");
+            conversationHistory.push({ role: "user", content: inputText });
             userInput.value = "";
             isTyping = true;
             sendBtn.disabled = true;
@@ -238,7 +240,7 @@
                     },
                     body: JSON.stringify({
                         model: "deepseek/deepseek-r1:free",
-                        messages: [{ role: "user", content: inputText }],
+                        messages: conversationHistory, // Send full conversation history
                     }),
                 });
 
@@ -251,9 +253,11 @@
 
                 removeTypingIndicator(typingDiv);
                 addMessage(botResponse, "bot");
+                conversationHistory.push({ role: "assistant", content: botResponse });
             } catch (error) {
                 removeTypingIndicator(typingDiv);
                 addMessage("Error: " + error.message, "bot");
+                conversationHistory.push({ role: "assistant", content: "Error: " + error.message });
             }
 
             isTyping = false;
@@ -273,6 +277,10 @@
 
         function loadChatHistory() {
             let savedChats = JSON.parse(localStorage.getItem("chatHistory")) || [];
+            conversationHistory = savedChats.map(msg => ({
+                role: msg.sender === "user" ? "user" : "assistant",
+                content: msg.text
+            }));
             savedChats.forEach(msg => {
                 let messageDiv = document.createElement("div");
                 messageDiv.classList.add("chat-message", msg.sender === "user" ? "user-message" : "bot-message");
@@ -301,6 +309,7 @@
         function clearChat() {
             localStorage.removeItem("chatHistory");
             chatBox.innerHTML = "";
+            conversationHistory = []; // Reset conversation history
         }
 
         function toggleDarkMode() {
